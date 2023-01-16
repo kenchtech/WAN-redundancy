@@ -1,0 +1,175 @@
+!
+version 15.6
+service timestamps debug datetime msec
+service timestamps log datetime msec
+no service password-encryption
+!
+hostname Customer_Router
+!
+boot-start-marker
+boot-end-marker
+!
+!
+!
+no aaa new-model
+ethernet lmi ce
+!
+!
+!
+mmi polling-interval 60
+no mmi auto-configure
+no mmi pvc
+mmi snmp-timeout 180
+!
+!
+!
+!
+!
+!
+!
+!
+ip dhcp excluded-address 192.168.1.1 192.168.1.20
+!
+ip dhcp pool LAN_DHCP_POOL
+ network 192.168.1.0 255.255.255.0
+ default-router 192.168.1.1 
+ dns-server 8.8.8.8 4.2.2.2 
+ lease infinite
+!
+!
+!
+ip domain name kenchtronics.com
+ip cef
+no ipv6 cef
+!
+multilink bundle-name authenticated
+!
+!
+!
+!
+!
+redundancy
+!
+!
+track 15 ip sla 1 reachability
+!
+! 
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+interface GigabitEthernet0/0
+ no shutdown
+ description CONNECTION TO ISP_B
+ ip address 5.5.5.1 255.255.255.252
+ ip nat outside
+ ip virtual-reassembly in
+ duplex auto
+ speed auto
+ media-type rj45
+!
+interface GigabitEthernet0/1
+ no shutdown
+ description CONNECTION TO ISP_A
+ ip address 30.30.30.1 255.255.255.252
+ ip nat outside
+ ip virtual-reassembly in
+ duplex auto
+ speed auto
+ media-type rj45
+!
+interface GigabitEthernet0/2
+ no shutdown
+ description CONNECTION TO LAN
+ ip address 192.168.1.1 255.255.255.0
+ ip nat inside
+ ip virtual-reassembly in
+ duplex auto
+ speed auto
+ media-type rj45
+!
+interface GigabitEthernet0/3
+ no shutdown
+ no ip address
+ shutdown
+ duplex auto
+ speed auto
+ media-type rj45
+!
+ip forward-protocol nd
+!
+!
+no ip http server
+no ip http secure-server
+ip nat inside source route-map ISP_A-MAP interface GigabitEthernet0/1 overload
+ip nat inside source route-map ISP_B-MAP interface GigabitEthernet0/0 overload
+ip route 0.0.0.0 0.0.0.0 30.30.30.2 track 15
+ip route 0.0.0.0 0.0.0.0 5.5.5.2 30
+!
+ip sla 1
+ icmp-echo 30.30.30.2 source-ip 30.30.30.1
+ frequency 50
+ip sla schedule 1 life forever start-time now
+!
+route-map ISP_A-MAP permit 10
+ match ip address 110
+ match interface GigabitEthernet0/1
+!
+route-map ISP_B-MAP permit 10
+ match ip address 110
+ match interface GigabitEthernet0/0
+!
+!
+access-list 110 permit ip 192.168.1.0 0.0.0.255 any
+!
+control-plane
+!
+banner exec ^C
+**************************************************************************
+* IOSv is strictly limited to use for evaluation, demonstration and IOS  *
+* education. IOSv is provided as-is and is not supported by Cisco's      *
+* Technical Advisory Center. Any use or disclosure, in whole or in part, *
+* of the IOSv Software or Documentation to any third party for any       *
+* purposes is expressly prohibited except as otherwise authorized by     *
+* Cisco in writing.                                                      *
+**************************************************************************^C
+banner incoming ^C
+**************************************************************************
+* IOSv is strictly limited to use for evaluation, demonstration and IOS  *
+* education. IOSv is provided as-is and is not supported by Cisco's      *
+* Technical Advisory Center. Any use or disclosure, in whole or in part, *
+* of the IOSv Software or Documentation to any third party for any       *
+* purposes is expressly prohibited except as otherwise authorized by     *
+* Cisco in writing.                                                      *
+**************************************************************************^C
+banner login ^C
+**************************************************************************
+* IOSv is strictly limited to use for evaluation, demonstration and IOS  *
+* education. IOSv is provided as-is and is not supported by Cisco's      *
+* Technical Advisory Center. Any use or disclosure, in whole or in part, *
+* of the IOSv Software or Documentation to any third party for any       *
+* purposes is expressly prohibited except as otherwise authorized by     *
+* Cisco in writing.                                                      *
+**************************************************************************^C
+!
+line con 0
+line aux 0
+line vty 0 4
+ login
+ transport input none
+!
+no scheduler allocate
+event manager applet ISP_1
+ event track 15 state down
+ action 1.0 cli command "enable"
+ action 2.0 cli command "clear ip nat translation forced"
+!
+end
